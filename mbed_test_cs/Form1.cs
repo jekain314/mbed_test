@@ -63,7 +63,7 @@ namespace mbed_test_cs
                 triggerRequested = false;
 
                 //the serial read/write action is done in a timer -- start the timer when we have connected 
-                this.timer1.Interval = 10000;
+                this.timer1.Interval = 5000;
                 timer1.Start();
             }
             catch  //catch the error if the initialization has failed
@@ -236,15 +236,25 @@ namespace mbed_test_cs
              bool nextTriggerAllowed = true;  //wait til the image has been saved to the camera's SD card before allowing next trigger
              timerPPS.Start();
 
-
-
              while (threadWorking)
              {
                  //count cycles through this loop (~ 100 Hz)
-                 loopCounter++;  
+                 loopCounter++;
+
+                 //triggerRequested set in foreground
+                 if (triggerRequested)
+                 {
+                     AppendRichText(richTextBox1, "command mbed to fire a trigger" + "\r\n");
+                     navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.FIRE_TRIGGER);
+                     navIF_.WriteMessages(); //if we have messages to write (commands to the mbed) then write them  
+
+                     timeFromTrigger.Reset(); timeFromTrigger.Start();
+                     triggerRequested = false;
+                     sentTriggerCommand++;
+                 }
 
                  //20Hz activities
-                 if (loopCounter == 10 && !triggerRequested)  //used to do things at a slower rate than loop cycles
+                 if ( (loopCounter%2 == 0) && !triggerRequested)  //used to do things at a slower rate than loop cycles
                  {
                      POSVELmessagesReceivedThisSec++;
                      navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.POSVEL_MESSAGE);
@@ -302,20 +312,9 @@ namespace mbed_test_cs
                      receivedMbedResponseToTrigger++;
                  }
 
-                 //triggerRequested set in foreground
-                 if (triggerRequested && nextTriggerAllowed && loopCounter > 0)
-                 {
-                     AppendRichText(richTextBox1, "command mbed to fire a trigger" + "\r\n");
-                     navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.FIRE_TRIGGER);
-                     navIF_.WriteMessages(); //if we have messages to write (commands to the mbed) then write them  
-
-                     timeFromTrigger.Reset(); timeFromTrigger.Start();
-                     triggerRequested = false;
-                     sentTriggerCommand++;
-                 }
 
                  //we will nominally go through this loop at 100Hz (10 millisecs period)
-                 Thread.Sleep(1);
+                 Thread.Sleep(50);
 
              }  //end of while
          }
@@ -323,19 +322,15 @@ namespace mbed_test_cs
         private void timerPPS_Tick(object sender, EventArgs e)
          {
              
-            
-            
-            
-            
-            
-            
-            AppendRichText(richTextBox1, secCounter.ToString() + "  POSVEL messages: " + POSVELmessagesReceivedThisSec.ToString() + 
+            AppendRichText(richTextBox1, secCounter.ToString() + "  POSVEL messages: " +
+                 navIF_.numPosVelMsgs.ToString() + "/" + POSVELmessagesReceivedThisSec.ToString() + 
                  "  numSV=  " + navIF_.posVel_.numSV.ToString() + 
                  "  " + sentTriggerCommand.ToString() + 
                  "  " + receivedMbedResponseToTrigger.ToString() + 
                  "  " + receivedImageOnCameraSDcard.ToString() +
                  "\r\n" );
              POSVELmessagesReceivedThisSec = 0;
+             navIF_.numPosVelMsgs = 0;
              secCounter++;
 
          }

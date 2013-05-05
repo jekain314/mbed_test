@@ -81,6 +81,7 @@ namespace mbed_test_cs
         public POSVEL posVel_;
         public bool triggerTimeReceievdFromMbed;
         public double triggerTime;
+        public int numPosVelMsgs = 0;
         
 
         public NavInterfaceMBed()
@@ -369,6 +370,7 @@ namespace mbed_test_cs
 	        }
 	        navIFMutex_.ReleaseMutex();
         }
+
         public void ReadMessages()
         {
 	        //make sure the serial link has been successfully established 
@@ -423,7 +425,6 @@ namespace mbed_test_cs
         public void WriteMessages()
         {
 
-            LogData(" writeBuffer Count = " + writeBuffer_.Count.ToString());
 
 	        //first check to see if the serial port is opened properly
 	        if (serialPort_ == null)
@@ -441,7 +442,9 @@ namespace mbed_test_cs
 	        {
 		        while (writeBuffer_.Count > 0)
 		        {
-			        serialPort_.WriteLine(writeBuffer_.Dequeue());
+                    String message_ = writeBuffer_.Dequeue();
+                    LogData("msgCount = " + writeBuffer_.Count.ToString() + "  writing message to mbed:  " + message_);
+                    serialPort_.WriteLine(message_);
 		        }
 	        }
 	        catch
@@ -453,6 +456,7 @@ namespace mbed_test_cs
 
 	        navIFMutex_.ReleaseMutex();
         }
+
         public List<String > MessagesRead()
         {
 	        List <String > msgs = null;
@@ -481,6 +485,7 @@ namespace mbed_test_cs
 	        }
 	        return msgs;
         }
+
         public void SendCommandToMBed(NAVMBED_CMDS commandIndex)
         {
 	        navIFMutex_.WaitOne();
@@ -546,6 +551,7 @@ namespace mbed_test_cs
 		        case NAVMBED_CMDS.FIRE_TRIGGER:
 			        {
 				        msgStr += "TRIGGER";
+                        LogData("PC sending Trigger Command \n");
 			        }
 		            break;
                 case NAVMBED_CMDS.GET_MBED_FILE:
@@ -599,6 +605,7 @@ namespace mbed_test_cs
 		        if (strEntries[1] == "POSVEL")
 		        {
 			        //LogData(" found a posVel message " + parseStr);
+                    numPosVelMsgs++;
 			        int numSV = Convert.ToInt32(strEntries[3]);
 			        char isReady = Convert.ToChar(strEntries[4]);
 			        if ((numSV > 4) && (numSV < 18) &&
