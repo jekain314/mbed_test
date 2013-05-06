@@ -29,9 +29,6 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.btnConnectMbed = new System.Windows.Forms.Button();
-            this.btnInitCamera = new System.Windows.Forms.Button();
-            this.btnSWTrigger = new System.Windows.Forms.Button();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.comboBox1 = new System.Windows.Forms.ComboBox();
@@ -39,46 +36,13 @@
             this.btnSetShutter = new System.Windows.Forms.Button();
             this.btnSetISO = new System.Windows.Forms.Button();
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
-            this.comboBox2 = new System.Windows.Forms.ComboBox();
-            this.button1 = new System.Windows.Forms.Button();
-            this.timer1 = new System.Windows.Forms.Timer(this.components);
-            this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
+            this.CameraImageReturnedThread = new System.ComponentModel.BackgroundWorker();
             this.timerPPS = new System.Windows.Forms.Timer(this.components);
             this.button2 = new System.Windows.Forms.Button();
+            this.PosVelThread = new System.ComponentModel.BackgroundWorker();
+            this.timerPosVel = new System.Windows.Forms.Timer(this.components);
+            this.triggerRequestThread = new System.ComponentModel.BackgroundWorker();
             this.SuspendLayout();
-            // 
-            // btnConnectMbed
-            // 
-            this.btnConnectMbed.Location = new System.Drawing.Point(26, 11);
-            this.btnConnectMbed.Margin = new System.Windows.Forms.Padding(2);
-            this.btnConnectMbed.Name = "btnConnectMbed";
-            this.btnConnectMbed.Size = new System.Drawing.Size(95, 46);
-            this.btnConnectMbed.TabIndex = 0;
-            this.btnConnectMbed.Text = "Connect mbed";
-            this.btnConnectMbed.UseVisualStyleBackColor = true;
-            this.btnConnectMbed.Click += new System.EventHandler(this.btnConnectMbed_Click);
-            // 
-            // btnInitCamera
-            // 
-            this.btnInitCamera.Location = new System.Drawing.Point(142, 11);
-            this.btnInitCamera.Margin = new System.Windows.Forms.Padding(2);
-            this.btnInitCamera.Name = "btnInitCamera";
-            this.btnInitCamera.Size = new System.Drawing.Size(86, 30);
-            this.btnInitCamera.TabIndex = 1;
-            this.btnInitCamera.Text = "Init Camera";
-            this.btnInitCamera.UseVisualStyleBackColor = true;
-            this.btnInitCamera.Click += new System.EventHandler(this.btnInitCamera_Click);
-            // 
-            // btnSWTrigger
-            // 
-            this.btnSWTrigger.Location = new System.Drawing.Point(142, 54);
-            this.btnSWTrigger.Margin = new System.Windows.Forms.Padding(2);
-            this.btnSWTrigger.Name = "btnSWTrigger";
-            this.btnSWTrigger.Size = new System.Drawing.Size(86, 28);
-            this.btnSWTrigger.TabIndex = 2;
-            this.btnSWTrigger.Text = "SW Trigger";
-            this.btnSWTrigger.UseVisualStyleBackColor = true;
-            this.btnSWTrigger.Click += new System.EventHandler(this.btnSWTrigger_Click);
             // 
             // textBox1
             // 
@@ -170,46 +134,11 @@
             this.richTextBox1.TabIndex = 9;
             this.richTextBox1.Text = "";
             // 
-            // comboBox2
+            // CameraImageReturnedThread
             // 
-            this.comboBox2.FormattingEnabled = true;
-            this.comboBox2.Items.AddRange(new object[] {
-            "Status",
-            "Position/Velocity",
-            "Start Data Record",
-            "Stop Data Record",
-            "Start Pos Stream",
-            "Stop Pos Stream",
-            "Start Log Message Info",
-            "Stop Log Message Info",
-            "Fire Trigger"});
-            this.comboBox2.Location = new System.Drawing.Point(386, 17);
-            this.comboBox2.Margin = new System.Windows.Forms.Padding(2);
-            this.comboBox2.Name = "comboBox2";
-            this.comboBox2.Size = new System.Drawing.Size(174, 21);
-            this.comboBox2.TabIndex = 10;
-            // 
-            // button1
-            // 
-            this.button1.Location = new System.Drawing.Point(446, 47);
-            this.button1.Margin = new System.Windows.Forms.Padding(2);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(89, 34);
-            this.button1.TabIndex = 11;
-            this.button1.Text = "Send Message";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
-            // 
-            // timer1
-            // 
-            this.timer1.Interval = 5000;
-            this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
-            // 
-            // backgroundWorker1
-            // 
-            this.backgroundWorker1.WorkerReportsProgress = true;
-            this.backgroundWorker1.WorkerSupportsCancellation = true;
-            this.backgroundWorker1.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorker1_DoWork);
+            this.CameraImageReturnedThread.WorkerReportsProgress = true;
+            this.CameraImageReturnedThread.WorkerSupportsCancellation = true;
+            this.CameraImageReturnedThread.DoWork += new System.ComponentModel.DoWorkEventHandler(this.cameraImageReturned_DoWork);
             // 
             // timerPPS
             // 
@@ -229,14 +158,26 @@
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
+            // PosVelThread
+            // 
+            this.PosVelThread.WorkerReportsProgress = true;
+            this.PosVelThread.WorkerSupportsCancellation = true;
+            this.PosVelThread.DoWork += new System.ComponentModel.DoWorkEventHandler(this.PosVelThread_DoWork);
+            // 
+            // timerPosVel
+            // 
+            this.timerPosVel.Tick += new System.EventHandler(this.timerPosVel_Tick);
+            // 
+            // triggerRequestThread
+            // 
+            this.triggerRequestThread.DoWork += new System.ComponentModel.DoWorkEventHandler(this.triggerRequestThread_DoWork);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(573, 471);
             this.Controls.Add(this.button2);
-            this.Controls.Add(this.button1);
-            this.Controls.Add(this.comboBox2);
             this.Controls.Add(this.richTextBox1);
             this.Controls.Add(this.btnSetISO);
             this.Controls.Add(this.btnSetShutter);
@@ -244,9 +185,6 @@
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.textBox1);
-            this.Controls.Add(this.btnSWTrigger);
-            this.Controls.Add(this.btnInitCamera);
-            this.Controls.Add(this.btnConnectMbed);
             this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "Form1";
             this.Text = "Waldo Device Test";
@@ -258,9 +196,6 @@
 
         #endregion
 
-        private System.Windows.Forms.Button btnConnectMbed;
-        private System.Windows.Forms.Button btnInitCamera;
-        private System.Windows.Forms.Button btnSWTrigger;
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.ComboBox comboBox1;
@@ -268,12 +203,12 @@
         private System.Windows.Forms.Button btnSetShutter;
         private System.Windows.Forms.Button btnSetISO;
         private System.Windows.Forms.RichTextBox richTextBox1;
-        private System.Windows.Forms.ComboBox comboBox2;
-        private System.Windows.Forms.Button button1;
-        private System.Windows.Forms.Timer timer1;
-        private System.ComponentModel.BackgroundWorker backgroundWorker1;
+        private System.ComponentModel.BackgroundWorker CameraImageReturnedThread;
         private System.Windows.Forms.Timer timerPPS;
         private System.Windows.Forms.Button button2;
+        private System.ComponentModel.BackgroundWorker PosVelThread;
+        private System.Windows.Forms.Timer timerPosVel;
+        private System.ComponentModel.BackgroundWorker triggerRequestThread;
     }
 }
 

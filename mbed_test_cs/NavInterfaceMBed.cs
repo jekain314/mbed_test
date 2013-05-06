@@ -43,7 +43,7 @@ namespace mbed_test_cs
     public struct POSVEL
     {
 	    public double GPStime;		//GPS receiver time (s)
-	    double relTime;		//time since the beginning of the GPS epoch
+	    double relTime;		    //time since the beginning of the GPS epoch
 						    //of the last received IMU message (s)
         public int numSV;
         public int solSV;
@@ -82,6 +82,7 @@ namespace mbed_test_cs
         public bool triggerTimeReceievdFromMbed;
         public double triggerTime;
         public int numPosVelMsgs = 0;
+        public bool PosVelMessageReceived = false;
         
 
         public NavInterfaceMBed()
@@ -557,6 +558,7 @@ namespace mbed_test_cs
                 case NAVMBED_CMDS.GET_MBED_FILE:
                     {
                         msgStr += "GETFILE";
+                        LogData("send request to the nav data from mbed \n");
                     }
                     break;
 	        }
@@ -621,6 +623,7 @@ namespace mbed_test_cs
 				        posVel_.velocity.velE = Convert.ToDouble(strEntries[9]);
 				        posVel_.velocity.velU = Convert.ToDouble(strEntries[10]);
 			        }
+                    PosVelMessageReceived = true;
 		        }
 		        else if (strEntries[1] == "TRIGGERTIME")
 		        {
@@ -641,21 +644,6 @@ namespace mbed_test_cs
 			        }
 		        }
 	        }
-        }
-
-        public void copyNavFileToPC()
-        {
-            //cause mbed to stop the data storage and enable transferring the nav file
-            SendCommandToMBed(NAVMBED_CMDS.GET_MBED_FILE);
-
-            //set up a PC file to store the binary data
-            FileStream fs = File.Create("C:\\temp\\nav.bin", 2048, FileOptions.None);
-            BinaryWriter bw = new BinaryWriter(fs);
-
-            //  read the incoming bytes on the serial data
-            //  this file may be 20MB or so ... 
-
-            //write the serial bytes to the binary file
         }
 
     }  //end of the class definition

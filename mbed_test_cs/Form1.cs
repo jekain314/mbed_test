@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
+using System.IO.Ports;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -22,18 +24,19 @@ namespace mbed_test_cs
         //this is the canon camera device interface (class library to the Canon SDK)
         //instantiate at the start -- if no camera found report back
         CanonCamera camera;
+
         String imageFilenameWithPath;
-        bool threadWorking = false;
-        bool triggerRequested = false;
+ 
+
         int POSVELmessagesReceivedThisSec = 0;
         int secCounter = 0;
-        int sentTriggerCommand = 0;
-        int receivedMbedResponseToTrigger = 0;
-        int receivedImageOnCameraSDcard = 0;
+        int posVelTicks = 0;
 
+        bool waitingForPOSVEL = true;
+        bool waitingForTriggerResponse = true;
 
-        // This delegate is used for writing to the RTB control from within a thread 
-        delegate void AppendRichTextDelegate(RichTextBox ctl, String str);
+        Stopwatch timeFromTrigger = new Stopwatch();
+        long elapsedTimeToTrigger = 0;
 
         public Form1()
         {
@@ -43,7 +46,6 @@ namespace mbed_test_cs
         private void Form1_Load(object sender, EventArgs e)
         {
             comboBox1.SelectedIndex = 3;
-            comboBox2.SelectedIndex = 1;
 
             ////////////////////////////////////////////////////////////////////////////////////////////////
             //connect to the embed serial interface -- should be connected to the USB port on the PC
@@ -56,15 +58,6 @@ namespace mbed_test_cs
             {
                 Log(" call NavInterfaceMbed constructor");
                 navIF_ = new NavInterfaceMBed();  //managed object constructor
-
-                //start the background worker thread where the mbed messages are sent and camera info is processed
-                this.backgroundWorker1.RunWorkerAsync();
-                threadWorking = true;
-                triggerRequested = false;
-
-                //the serial read/write action is done in a timer -- start the timer when we have connected 
-                this.timer1.Interval = 5000;
-                timer1.Start();
             }
             catch  //catch the error if the initialization has failed
             {
@@ -85,13 +78,10 @@ namespace mbed_test_cs
                 camera = null;
                 Log("Error connecting to camera");
             }
+
+            this.timerPosVel.Interval = 100;
+            timerPosVel.Start();
         }
-
-        private void btnConnectMbed_Click(object sender, EventArgs e)
-        {
-            
-
-		 }
 
          //this procedure just prints to the rich text box display to the user ... 
 		 void Log(String msg)
@@ -114,76 +104,6 @@ namespace mbed_test_cs
 			}
 		}
 
-         private void button1_Click(object sender, EventArgs e)
-         {
-             
-			 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			 //this sends a command across the Nav Interface serial interface to the mbed
-			 //the messages are selected from a comboBox
-			 // see the enum NAVMBED_CMDS (in the NavInterfaceMbed class) where the potential messages are declared
-			 // for each message declared there, there must be a case selecrion provided below
-			 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-			 if (navIF_ == null)  //make sure the interface exists
-			 {
-				 Log("mBed not Connected.");  //print message if not connected
-			 }
-
-			 switch (this.comboBox2.SelectedIndex)  //switch based on the message selected from the pull down
-			 {
-				 case 0:
-					 navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.STATUS_MESSAGE);
-				 break;
-				 case 1:
-					 navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.POSVEL_MESSAGE);
-				 break;
-				 case 2:
-					 navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.RECORD_DATA_ON);
-					 Thread.Sleep(100);
-				 break;
-				 case 3:
-					 navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.RECORD_DATA_OFF);
-					 Thread.Sleep(100);
-				 break;
-				 case 4:
-					 navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.STREAM_POS_ON);
-				 break;
-				 case 5:
-					 navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.STREAM_POS_OFF);
-				 break;
-				 case 6:
-					 navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.LOG_INFO_ON);
-				 break;
-				 case 7:
-					 navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.LOG_INFO_OFF);
-                     break;
-				 case 8: 
-					 navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.FIRE_TRIGGER);
-				 break;
-			 }
-         }
-
-         private void timer1_Tick(object sender, EventArgs e)
-         {
-             triggerRequested = true;
-         }
-
-         private void btnInitCamera_Click(object sender, EventArgs e)
-         {
-         
- 
-            
-         }
-
-         private void btnSWTrigger_Click(object sender, EventArgs e)
-         {
-             if (camera != null)
-             {
-                 //fire a software trigger to the Canon camera
-                 //The mbed will trap the event time of the actual image event using the hotshoe
-                 camera.FireTrigger();
-             }
-         }
 
          private void btnSetShutter_Click(object sender, EventArgs e)
          {
@@ -211,113 +131,7 @@ namespace mbed_test_cs
 			 {
 				 richTextBox1.AppendText("Error setting iso value.");
 			 }
-
 		 }
-
-         private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
-         {
-             //////////////////////////////////////////////////////////////////////
-             //highspeed background thread for 
-             //     (1 requesting/retrieving messages from mbed
-             //     (2 processing images taken by the camer
-             /////////////////////////////////////////////////////////////////////
-
-             //to do:
-             //  request and retrieve a POSVEL message at a high rate (e.g. 20 Hz);
-             //  request a hardware trigger when requested by the foreground
-             //  process any error messages received by the mbed and report to foreground
-             //  detect missed responses from mbed and report to foreground
-             //  check for the availability of a new image from the camera on its SD card
-             //  dont allow a new trigger until a trigger request has had a response
-
-             int loopCounter = 0;
-             Stopwatch timeFromTrigger = new Stopwatch();
-             timeFromTrigger.Start();
-             bool nextTriggerAllowed = true;  //wait til the image has been saved to the camera's SD card before allowing next trigger
-             timerPPS.Start();
-
-             while (threadWorking)
-             {
-                 //count cycles through this loop (~ 100 Hz)
-                 loopCounter++;
-
-                 //triggerRequested set in foreground
-                 if (triggerRequested)
-                 {
-                     AppendRichText(richTextBox1, "command mbed to fire a trigger" + "\r\n");
-                     navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.FIRE_TRIGGER);
-                     navIF_.WriteMessages(); //if we have messages to write (commands to the mbed) then write them  
-
-                     timeFromTrigger.Reset(); timeFromTrigger.Start();
-                     triggerRequested = false;
-                     sentTriggerCommand++;
-                 }
-
-                 //20Hz activities
-                 if ( (loopCounter%2 == 0) && !triggerRequested)  //used to do things at a slower rate than loop cycles
-                 {
-                     POSVELmessagesReceivedThisSec++;
-                     navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.POSVEL_MESSAGE);
-                     navIF_.WriteMessages(); //if we have messages to write (commands to the mbed) then write them  
-
-                     loopCounter = 0;
-                 }
-
-                 //mbed message processing
-                 if (navIF_ != null)  //test for the navIF presence (see the NavInterfaceMbed class specification) 
-                 {
-                     navIF_.ReadMessages();  //read any nav messages from the mbed -- there may be multiple messages
-                     navIF_.ParseMessages();
-                     //navIF_.WriteMessages();
-                     /*
-                     List<String> msgList = navIF_.MessagesRead();  //get the Possibly multiple) messages presented by the mbed serial interface
-
-                     if (msgList != null)  //if there are messages present, present them to the rich text box to the user
-                     {
-                         foreach (String msg in msgList)  //may be multiple messages presented from the mbed
-                         {
-                             //test the message for an action:
-                             //(1)  if TRIGGER  --- write the trigger file (assume for now we will bulb-trigger)
-                             //(2)  if POSVEL   --- make it availble
-                             //(3)  if ERROR    --- terminate and print the error
-
-                             //anything that is written to the USB on the mbed using "printf" will be displayed on the RTB
-                             //Log(msg);  //this writes messages to the Rich Text Box ...
-                         }
-                     }
-                      * */
-
-                     //we also write any queued messages to the serial port
-                     //  (1) request POSVAL
-                     //  (2) if time-to-trigger -- request trigger from mbed
-                 }
-
-                 if (camera != null)
-                 {
-                     if (camera.ImageReady(out imageFilenameWithPath))
-                     {
-                         //imageReady should come after a mbed trigger request
-                         //set a delay and dont wait too long for another trigger
-                         //get stats for the delay between the request and the imageReady
-                         camera.resetImageReady();
-                         AppendRichText(richTextBox1," camera Image:  " + imageFilenameWithPath  + "   dt=  " +  timeFromTrigger.ElapsedMilliseconds.ToString() +  "\r\n");
-                         receivedImageOnCameraSDcard++;
-                     }
-                 }
-
-                 if (navIF_.triggerTimeReceievdFromMbed)
-                 {
-                     AppendRichText(richTextBox1, "triggerTimeReceived:  " + navIF_.triggerTime.ToString() +  "\r\n");
-                     navIF_.triggerTimeReceievdFromMbed = false;
-                     receivedMbedResponseToTrigger++;
-                 }
-
-
-                 //we will nominally go through this loop at 100Hz (10 millisecs period)
-                 Thread.Sleep(50);
-
-             }  //end of while
-         }
 
         private void timerPPS_Tick(object sender, EventArgs e)
          {
@@ -325,9 +139,6 @@ namespace mbed_test_cs
             AppendRichText(richTextBox1, secCounter.ToString() + "  POSVEL messages: " +
                  navIF_.numPosVelMsgs.ToString() + "/" + POSVELmessagesReceivedThisSec.ToString() + 
                  "  numSV=  " + navIF_.posVel_.numSV.ToString() + 
-                 "  " + sentTriggerCommand.ToString() + 
-                 "  " + receivedMbedResponseToTrigger.ToString() + 
-                 "  " + receivedImageOnCameraSDcard.ToString() +
                  "\r\n" );
              POSVELmessagesReceivedThisSec = 0;
              navIF_.numPosVelMsgs = 0;
@@ -337,16 +148,124 @@ namespace mbed_test_cs
 
         private void button2_Click(object sender, EventArgs e)
         {
-            //stop the background worker thread
-            threadWorking = false;
+            //stop the requests for triggers and PosVel
+            timerPosVel.Stop();
+        }
 
-            //stop the timers
-            timerPPS.Stop();
-            timer1.Stop();
+        //this thread is started in the timerPosVel_Tick()
+        //it requests a PosVel and waits for a response.
+        //the timerPosVel_Tick() also waits and is released whrn the thread completes
+        private void PosVelThread_DoWork(object sender, DoWorkEventArgs e)
+        {
+            bool gettingRequestedPosvel = true;
 
-            //copy the IMU and GPS binary file to the PC
-            navIF_.copyNavFileToPC();
-        }  
+            navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.POSVEL_MESSAGE);
+            navIF_.WriteMessages(); //if we have messages to write (commands to the mbed) then write them  
+
+            while (gettingRequestedPosvel)
+            {
+                //read the data received from the mbed to check for a PosVel message
+                navIF_.ReadMessages(); 
+                navIF_.ParseMessages();
+
+                //if received, exit this loop and the receive message event will be fired
+                if (navIF_.PosVelMessageReceived) gettingRequestedPosvel = false;
+            }
+
+            waitingForPOSVEL = false;
+        }
+
+        private void timerPosVel_Tick(object sender, EventArgs e)
+        {
+            ////////////////////////////////////////////////////////////////////////////////
+            //this timer will go off and get the PosVel data and wait til it is received
+            // With the Waldo_FCS, there is no need to update the platform/flightLine geometry unless we get a new PosVel
+
+
+
+
+            //start the thread to go get the PosVel from the mbed
+            //this send the PosVel command to mbed and stars a loop to read the mbed data
+            //when the data is received, the thread exits, and the threadCompleted event is fired
+            //this completion event merely sets waitingForPOSVEL to false
+
+            if ((posVelTicks % 50) != 0)
+            {
+                waitingForPOSVEL = true;
+                this.PosVelThread.RunWorkerAsync();
+                while (waitingForPOSVEL) { }
+            }
+
+
+            //here we will compute the platform geometry and test for a trigger requirement
+            //for mbed_test, we will simultate this by just waiting for an elepsed number of ticks
+            //and then do a trigger request
+            //note that the PosVel thread and the triggerRequest threads never are running sequentially
+
+            if ((posVelTicks % 50) == 0)
+            {
+                this.CameraImageReturnedThread.RunWorkerAsync();
+
+                AppendRichText(richTextBox1, "command mbed to fire a trigger" + "\r\n");
+                waitingForTriggerResponse = true;
+                this.triggerRequestThread.RunWorkerAsync();
+                while (waitingForTriggerResponse) { };
+                posVelTicks = 0;
+
+                //this begins the thread that looks for the canon camera response
+                //when the image is returned, the image-to-trigger correlation must be done
+                //we dont need to do anything else here
+            }
+
+            if (camera.ImageReady(out imageFilenameWithPath))
+            {
+                AppendRichText(richTextBox1, " camera Image:  " + imageFilenameWithPath + " dt=  " + elapsedTimeToTrigger.ToString() + "\r\n");
+                camera.resetImageReady();
+            }
+
+            posVelTicks++;
+
+ 
+
+ 
+        }
+
+
+
+        private void triggerRequestThread_DoWork(object sender, DoWorkEventArgs e)
+        {
+            navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.FIRE_TRIGGER);
+            navIF_.WriteMessages(); //if we have messages to write (commands to the mbed) then write them  
+
+            bool gettingTriggerResponse = true;
+
+            while (gettingTriggerResponse)
+            {
+                //read the data received from the mbed to check for a PosVel message
+                navIF_.ReadMessages();
+                navIF_.ParseMessages();
+
+                //if received, exit this loop and the receive message event will be fired
+                if (navIF_.triggerTimeReceievdFromMbed)
+                {
+                    gettingTriggerResponse = false;
+                    navIF_.triggerTimeReceievdFromMbed = false;
+                }
+            }
+            waitingForTriggerResponse = false;
+
+        }
+
+        private void cameraImageReturned_DoWork(object sender, DoWorkEventArgs e)
+        {
+            //this thread is initiated at the instant that the trigger request is made
+            timeFromTrigger.Start();
+            while (!camera.ImageReady(out imageFilenameWithPath) ) {  }
+            elapsedTimeToTrigger = timeFromTrigger.ElapsedMilliseconds;
+            timeFromTrigger.Reset();
+        }
+
+
 
 
      }  //end of Form1 Class
