@@ -43,8 +43,6 @@ namespace mbed_test_cs
     public struct POSVEL
     {
 	    public double GPStime;		//GPS receiver time (s)
-	    double relTime;		    //time since the beginning of the GPS epoch
-						    //of the last received IMU message (s)
         public int numSV;
         public int solSV;
         public POS position;
@@ -139,7 +137,7 @@ namespace mbed_test_cs
 
         ~NavInterfaceMBed()
         {
-            //Close();
+           // Close();
         }
 
         public void LogData(String str)
@@ -351,25 +349,55 @@ namespace mbed_test_cs
 	        //orderly shutdown the mbed serial interface
 	        ////////////////////////////////////////////////////////
 
-	        SendCommandToMBed(NAVMBED_CMDS.RECORD_DATA_OFF);
+	        SendCommandToMBed(NAVMBED_CMDS.GET_MBED_FILE);
 	        // Manually initiate these calls to ensure message is sent
 	        // and log confirmation
 	        WriteMessages();
 	        // Allow time for command to be sent
 	        Thread.Sleep(125);
 	        ReadMessages();
-	        Thread.Sleep(125);
+            ParseMessages();
 
-	        //  Blocks the current thread until the current WaitHandle receives a signal
-	        navIFMutex_.WaitOne();
+            FileStream fs = File.Create("c:\\TEMP\\NAV.BIN", 2048, FileOptions.None);
+            BinaryWriter BW = new BinaryWriter(fs);
+            byte[] byteBuff = new byte[2*4096];
 
-	        writeNavFiles_ = false;
+            int nBytes = 0;
+  
+            String msgStr = "ls";
+            writeBuffer_.Enqueue(msgStr);
+            WriteMessages();
 
-	        if (serialPort_ != null)
-	        {
-		        serialPort_ = null;
-	        }
-	        navIFMutex_.ReleaseMutex();
+            Thread.Sleep(100);
+
+
+            msgStr = "bcat Data/Nav.bin";
+            writeBuffer_.Enqueue(msgStr);
+            WriteMessages();
+
+            Thread.Sleep(100);
+            int maxBytesInBuff = 0;
+
+            Stopwatch transferTime = new Stopwatch();
+            transferTime.Start();
+            while (serialPort_.BytesToRead > 0)
+            {
+                int btr = serialPort_.BytesToRead;
+                serialPort_.Read(byteBuff, 0, btr);
+                BW.Write(byteBuff, 0, btr);
+                nBytes += btr;
+                if (btr > maxBytesInBuff) maxBytesInBuff = btr;
+                Thread.Sleep(1);
+            }
+            long trTime = transferTime.ElapsedMilliseconds;
+            double bytesPerSec = (nBytes/1000.0) / (trTime/1000.0);
+          
+            fs.Close();
+            BW.Close();
+
+            nBytes = nBytes;
+
+
         }
 
         public void ReadMessages()

@@ -39,9 +39,8 @@
             this.CameraImageReturnedThread = new System.ComponentModel.BackgroundWorker();
             this.timerPPS = new System.Windows.Forms.Timer(this.components);
             this.button2 = new System.Windows.Forms.Button();
-            this.PosVelThread = new System.ComponentModel.BackgroundWorker();
-            this.timerPosVel = new System.Windows.Forms.Timer(this.components);
-            this.triggerRequestThread = new System.ComponentModel.BackgroundWorker();
+            this.timerTrigger = new System.Windows.Forms.Timer(this.components);
+            this.button1 = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // textBox1
@@ -158,25 +157,28 @@
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
-            // PosVelThread
+            // timerTrigger
             // 
-            this.PosVelThread.WorkerReportsProgress = true;
-            this.PosVelThread.WorkerSupportsCancellation = true;
-            this.PosVelThread.DoWork += new System.ComponentModel.DoWorkEventHandler(this.PosVelThread_DoWork);
+            this.timerTrigger.Tick += new System.EventHandler(this.timerTrigger_Tick);
             // 
-            // timerPosVel
+            // button1
             // 
-            this.timerPosVel.Tick += new System.EventHandler(this.timerPosVel_Tick);
-            // 
-            // triggerRequestThread
-            // 
-            this.triggerRequestThread.DoWork += new System.ComponentModel.DoWorkEventHandler(this.triggerRequestThread_DoWork);
+            this.button1.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.button1.ForeColor = System.Drawing.Color.Green;
+            this.button1.Location = new System.Drawing.Point(475, 191);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(75, 53);
+            this.button1.TabIndex = 13;
+            this.button1.Text = "START";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(573, 471);
+            this.Controls.Add(this.button1);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.richTextBox1);
             this.Controls.Add(this.btnSetISO);
@@ -206,9 +208,8 @@
         private System.ComponentModel.BackgroundWorker CameraImageReturnedThread;
         private System.Windows.Forms.Timer timerPPS;
         private System.Windows.Forms.Button button2;
-        private System.ComponentModel.BackgroundWorker PosVelThread;
-        private System.Windows.Forms.Timer timerPosVel;
-        private System.ComponentModel.BackgroundWorker triggerRequestThread;
+        private System.Windows.Forms.Timer timerTrigger;
+        private System.Windows.Forms.Button button1;
     }
 }
 

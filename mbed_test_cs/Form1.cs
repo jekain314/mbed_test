@@ -31,12 +31,11 @@ namespace mbed_test_cs
         int POSVELmessagesReceivedThisSec = 0;
         int secCounter = 0;
         int posVelTicks = 0;
-
-        bool waitingForPOSVEL = true;
-        bool waitingForTriggerResponse = true;
+        bool realTimeLoop = false;
 
         Stopwatch timeFromTrigger = new Stopwatch();
         long elapsedTimeToTrigger = 0;
+        bool fireTrigger = false; 
 
         public Form1()
         {
@@ -79,8 +78,10 @@ namespace mbed_test_cs
                 Log("Error connecting to camera");
             }
 
-            this.timerPosVel.Interval = 100;
-            timerPosVel.Start();
+            timerTrigger.Interval = 10000;
+            timerPPS.Stop();
+            timerTrigger.Stop();
+
         }
 
          //this procedure just prints to the rich text box display to the user ... 
@@ -139,7 +140,7 @@ namespace mbed_test_cs
             AppendRichText(richTextBox1, secCounter.ToString() + "  POSVEL messages: " +
                  navIF_.numPosVelMsgs.ToString() + "/" + POSVELmessagesReceivedThisSec.ToString() + 
                  "  numSV=  " + navIF_.posVel_.numSV.ToString() + 
-                 "\r\n" );
+                 "\n" );
              POSVELmessagesReceivedThisSec = 0;
              navIF_.numPosVelMsgs = 0;
              secCounter++;
@@ -148,113 +149,72 @@ namespace mbed_test_cs
 
         private void button2_Click(object sender, EventArgs e)
         {
+
             //stop the requests for triggers and PosVel
-            timerPosVel.Stop();
+            realTimeLoop = false;
+            timerPPS.Stop();
+
+            navIF_.Close();
+            Application.Exit();
         }
 
-        //this thread is started in the timerPosVel_Tick()
-        //it requests a PosVel and waits for a response.
-        //the timerPosVel_Tick() also waits and is released whrn the thread completes
-        private void PosVelThread_DoWork(object sender, DoWorkEventArgs e)
-        {
-            bool gettingRequestedPosvel = true;
-
-            navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.POSVEL_MESSAGE);
-            navIF_.WriteMessages(); //if we have messages to write (commands to the mbed) then write them  
-
-            while (gettingRequestedPosvel)
-            {
-                //read the data received from the mbed to check for a PosVel message
-                navIF_.ReadMessages(); 
-                navIF_.ParseMessages();
-
-                //if received, exit this loop and the receive message event will be fired
-                if (navIF_.PosVelMessageReceived) gettingRequestedPosvel = false;
-            }
-
-            waitingForPOSVEL = false;
-        }
-
-        private void timerPosVel_Tick(object sender, EventArgs e)
+        private void RealTimeLoop()
         {
             ////////////////////////////////////////////////////////////////////////////////
             //this timer will go off and get the PosVel data and wait til it is received
             // With the Waldo_FCS, there is no need to update the platform/flightLine geometry unless we get a new PosVel
 
-
-
-
-            //start the thread to go get the PosVel from the mbed
-            //this send the PosVel command to mbed and stars a loop to read the mbed data
-            //when the data is received, the thread exits, and the threadCompleted event is fired
-            //this completion event merely sets waitingForPOSVEL to false
-
-            if ((posVelTicks % 50) != 0)
-            {
-                waitingForPOSVEL = true;
-                this.PosVelThread.RunWorkerAsync();
-                while (waitingForPOSVEL) { }
-            }
-
-
-            //here we will compute the platform geometry and test for a trigger requirement
-            //for mbed_test, we will simultate this by just waiting for an elepsed number of ticks
-            //and then do a trigger request
-            //note that the PosVel thread and the triggerRequest threads never are running sequentially
-
-            if ((posVelTicks % 50) == 0)
-            {
-                this.CameraImageReturnedThread.RunWorkerAsync();
-
-                AppendRichText(richTextBox1, "command mbed to fire a trigger" + "\r\n");
-                waitingForTriggerResponse = true;
-                this.triggerRequestThread.RunWorkerAsync();
-                while (waitingForTriggerResponse) { };
-                posVelTicks = 0;
-
-                //this begins the thread that looks for the canon camera response
-                //when the image is returned, the image-to-trigger correlation must be done
-                //we dont need to do anything else here
-            }
-
-            if (camera.ImageReady(out imageFilenameWithPath))
-            {
-                AppendRichText(richTextBox1, " camera Image:  " + imageFilenameWithPath + " dt=  " + elapsedTimeToTrigger.ToString() + "\r\n");
-                camera.resetImageReady();
-            }
-
-            posVelTicks++;
-
- 
-
- 
-        }
-
-
-
-        private void triggerRequestThread_DoWork(object sender, DoWorkEventArgs e)
-        {
-            navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.FIRE_TRIGGER);
+            navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.POSVEL_MESSAGE);
             navIF_.WriteMessages(); //if we have messages to write (commands to the mbed) then write them  
 
-            bool gettingTriggerResponse = true;
-
-            while (gettingTriggerResponse)
+            while (!navIF_.PosVelMessageReceived)
             {
                 //read the data received from the mbed to check for a PosVel message
                 navIF_.ReadMessages();
                 navIF_.ParseMessages();
 
                 //if received, exit this loop and the receive message event will be fired
-                if (navIF_.triggerTimeReceievdFromMbed)
-                {
-                    gettingTriggerResponse = false;
-                    navIF_.triggerTimeReceievdFromMbed = false;
-                }
             }
-            waitingForTriggerResponse = false;
+           // AppendRichText(richTextBox1, "posVel requested \n");
 
+            navIF_.PosVelMessageReceived = false;
+
+            Application.DoEvents();
+
+            Thread.Sleep(50);
+            //for Waldo_FCS, here we will compute the platform geometry and test for a trigger requirement
+            //for mbed_test, we will simultate this by just waiting for an elepsed number of ticks
+            //and then do a trigger request
+
+            if (fireTrigger)
+            {
+                //AppendRichText(richTextBox1, "firing trigger \n");
+                //this.CameraImageReturnedThread.RunWorkerAsync();
+
+                navIF_.SendCommandToMBed(NavInterfaceMBed.NAVMBED_CMDS.FIRE_TRIGGER);
+                navIF_.WriteMessages(); //if we have messages to write (commands to the mbed) then write them 
+                timeFromTrigger.Start();
+
+                navIF_.triggerTimeReceievdFromMbed = false;
+                while (!navIF_.triggerTimeReceievdFromMbed)
+                {
+                    //read the data received from the mbed to check for a PosVel message
+                    navIF_.ReadMessages();
+                    navIF_.ParseMessages();
+                }
+                fireTrigger = false;
+            }
+
+            if (camera.ImageReady(out imageFilenameWithPath))
+            {
+                AppendRichText(richTextBox1,navIF_.triggerTime.ToString() +  " camera Image:  " +
+                            imageFilenameWithPath + " dt=  " + timeFromTrigger.ElapsedMilliseconds.ToString() + "\r\n");
+                camera.resetImageReady();
+                timeFromTrigger.Reset();
+            }
+            posVelTicks++;
         }
+
 
         private void cameraImageReturned_DoWork(object sender, DoWorkEventArgs e)
         {
@@ -263,6 +223,24 @@ namespace mbed_test_cs
             while (!camera.ImageReady(out imageFilenameWithPath) ) {  }
             elapsedTimeToTrigger = timeFromTrigger.ElapsedMilliseconds;
             timeFromTrigger.Reset();
+        }
+
+        private void timerTrigger_Tick(object sender, EventArgs e)
+        {
+            fireTrigger = true;
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            timerPPS.Start();
+            timerTrigger.Start();
+            realTimeLoop = true;
+            //the real time is simulated by the following while loop
+            while (realTimeLoop)
+            {
+                RealTimeLoop();
+            }
+
         }
 
 
