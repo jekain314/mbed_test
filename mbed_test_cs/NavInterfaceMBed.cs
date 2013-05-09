@@ -10,6 +10,8 @@ using System.Management;
 using System.Threading;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
+
 
 namespace mbed_test_cs
 {
@@ -81,10 +83,14 @@ namespace mbed_test_cs
         public double triggerTime;
         public int numPosVelMsgs = 0;
         public bool PosVelMessageReceived = false;
+        RichTextBox rtb;
         
 
-        public NavInterfaceMBed()
+        public NavInterfaceMBed(RichTextBox rtbIn)
         {
+
+
+            rtb = rtbIn;
 
             //initialize some variables and opens a debug file
             InitMBed();
@@ -244,7 +250,7 @@ namespace mbed_test_cs
 		        else
 		        {
 			        LogData("Test Nav Proc");
-			        if (TestMBed())  //test the mbed by sending and receiveing test messages -- see below for this procedure
+			        if (TestMBed() )  //test the mbed by sending and receiveing test messages -- see below for this procedure
 			        {
 				        LogData("Test MBed Passed");
 			        }
@@ -369,13 +375,17 @@ namespace mbed_test_cs
             WriteMessages();
 
             Thread.Sleep(100);
+            ReadMessages();
+
 
 
             msgStr = "bcat Data/Nav.bin";
             writeBuffer_.Enqueue(msgStr);
             WriteMessages();
-
             Thread.Sleep(100);
+            ReadMessages();
+
+
             int maxBytesInBuff = 0;
 
             Stopwatch transferTime = new Stopwatch();
@@ -383,6 +393,7 @@ namespace mbed_test_cs
             while (serialPort_.BytesToRead > 0)
             {
                 int btr = serialPort_.BytesToRead;
+                if (btr > 4096) btr = 4096;
                 serialPort_.Read(byteBuff, 0, btr);
                 BW.Write(byteBuff, 0, btr);
                 nBytes += btr;
@@ -391,12 +402,19 @@ namespace mbed_test_cs
             }
             long trTime = transferTime.ElapsedMilliseconds;
             double bytesPerSec = (nBytes/1000.0) / (trTime/1000.0);
-          
+
+            msgStr = "exit";   //get out of the SDshell program
+            writeBuffer_.Enqueue(msgStr);
+            WriteMessages();
+            Thread.Sleep(100);
+            ReadMessages();
+            Thread.Sleep(100);
+
+            serialPort_.Close();
             fs.Close();
             BW.Close();
 
-            nBytes = nBytes;
-
+            nBytes = nBytes;        
 
         }
 
@@ -437,6 +455,7 @@ namespace mbed_test_cs
 			    {
 				    //Dequeue.  Removes and returns the object at the beginning of the Queue(Of T). 
 				    String curStr = serialBuffer_.Dequeue();
+                    rtb.AppendText(  curStr + "\n");
 				    readBuffer_.Enqueue(curStr);
 
 			    }

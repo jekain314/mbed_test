@@ -56,7 +56,7 @@ namespace mbed_test_cs
             try  //call the Nav interface constructor
             {
                 Log(" call NavInterfaceMbed constructor");
-                navIF_ = new NavInterfaceMBed();  //managed object constructor
+                navIF_ = new NavInterfaceMBed(richTextBox1);  //managed object constructor
             }
             catch  //catch the error if the initialization has failed
             {
@@ -152,10 +152,9 @@ namespace mbed_test_cs
 
             //stop the requests for triggers and PosVel
             realTimeLoop = false;
-            timerPPS.Stop();
 
-            navIF_.Close();
-            Application.Exit();
+            Application.DoEvents();
+
         }
 
         private void RealTimeLoop()
@@ -172,6 +171,7 @@ namespace mbed_test_cs
                 //read the data received from the mbed to check for a PosVel message
                 navIF_.ReadMessages();
                 navIF_.ParseMessages();
+                Application.DoEvents();
 
                 //if received, exit this loop and the receive message event will be fired
             }
@@ -181,7 +181,7 @@ namespace mbed_test_cs
 
             Application.DoEvents();
 
-            Thread.Sleep(50);
+            Thread.Sleep(500);
             //for Waldo_FCS, here we will compute the platform geometry and test for a trigger requirement
             //for mbed_test, we will simultate this by just waiting for an elepsed number of ticks
             //and then do a trigger request
@@ -201,6 +201,7 @@ namespace mbed_test_cs
                     //read the data received from the mbed to check for a PosVel message
                     navIF_.ReadMessages();
                     navIF_.ParseMessages();
+                    Application.DoEvents();
                 }
                 fireTrigger = false;
             }
@@ -213,6 +214,8 @@ namespace mbed_test_cs
                 timeFromTrigger.Reset();
             }
             posVelTicks++;
+            Application.DoEvents();
+
         }
 
 
@@ -232,13 +235,31 @@ namespace mbed_test_cs
 
         private void button1_Click(object sender, EventArgs e)
         {
-            timerPPS.Start();
-            timerTrigger.Start();
-            realTimeLoop = true;
-            //the real time is simulated by the following while loop
-            while (realTimeLoop)
+
+            if (!realTimeLoop)
             {
-                RealTimeLoop();
+                realTimeLoop = true;
+                button1.ForeColor = Color.Red;
+                button1.Text = "STOP";
+
+                timerPPS.Start();
+                timerTrigger.Start();
+                realTimeLoop = true;
+                //the real time is simulated by the following while loop
+                while (realTimeLoop)
+                {
+                    RealTimeLoop();
+
+                    Application.DoEvents();
+                }
+            }
+            else
+            {
+                realTimeLoop = false;
+                timerPPS.Stop();
+                timerTrigger.Stop();
+                navIF_.Close();
+                Application.Exit();
             }
 
         }
