@@ -349,12 +349,14 @@ namespace mbed_test_cs
 	        //just print a message to the log file declaring this is an mbed interface
 	        LogData("MBed Interface.");
         }
+
         public void Close()
         {
 	        ////////////////////////////////////////////////////////
 	        //orderly shutdown the mbed serial interface
 	        ////////////////////////////////////////////////////////
 
+            //LogData(" entering the nav close procedure \n");
 	        SendCommandToMBed(NAVMBED_CMDS.GET_MBED_FILE);
 	        // Manually initiate these calls to ensure message is sent
 	        // and log confirmation
@@ -403,6 +405,8 @@ namespace mbed_test_cs
             long trTime = transferTime.ElapsedMilliseconds;
             double bytesPerSec = (nBytes/1000.0) / (trTime/1000.0);
 
+            //LogData(" total transfer time (msecs) = " + trTime.ToString() + "bytesPerSec = " + bytesPerSec.ToString("D2"));
+
             msgStr = "exit";   //get out of the SDshell program
             writeBuffer_.Enqueue(msgStr);
             WriteMessages();
@@ -410,9 +414,18 @@ namespace mbed_test_cs
             ReadMessages();
             Thread.Sleep(100);
 
+            //LogData(" send exit to mbed \n");
+
+
+            BW.Close(); //LogData(" closed binary writer \n");
+            fs.Close(); //LogData(" closes nav.bin file \n");
+
+            Thread.Sleep(1000);
+
             serialPort_.Close();
-            fs.Close();
-            BW.Close();
+            LogData(" closed serial port \n");
+
+            Thread.Sleep(10000);
 
             nBytes = nBytes;        
 

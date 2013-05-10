@@ -257,7 +257,11 @@ namespace mbed_test_cs
             {
                 realTimeLoop = false;
                 timerPPS.Stop();
+                Thread.Sleep(100);
                 timerTrigger.Stop();
+                Thread.Sleep(100);
+
+
                 navIF_.Close();
                 Application.Exit();
             }
