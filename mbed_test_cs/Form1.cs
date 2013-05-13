@@ -147,15 +147,7 @@ namespace mbed_test_cs
 
          }
 
-        private void button2_Click(object sender, EventArgs e)
-        {
-
-            //stop the requests for triggers and PosVel
-            realTimeLoop = false;
-
-            Application.DoEvents();
-
-        }
+ 
 
         private void RealTimeLoop()
         {
@@ -233,6 +225,10 @@ namespace mbed_test_cs
             fireTrigger = true;
         }
 
+
+        //////////////////////////////////////////////////////////
+        //  START and STOP button
+        /////////////////////////////////////////////////////
         private void button1_Click(object sender, EventArgs e)
         {
 
@@ -263,9 +259,22 @@ namespace mbed_test_cs
 
 
                 navIF_.Close();
-                Application.Exit();
+
+                label3.Visible = true;
+                label4.Visible = true;
+                label5.Visible = true;
+                label3.Text = "xferTime = " + (navIF_.trTime/1000.0).ToString("F2") + "secs";
+                label4.Text = "KBPerSec = " + navIF_.bytesPerSec.ToString("F1");
+                label5.Text = "maxBytes = " + navIF_.maxBytesInBuff.ToString();
+                Application.DoEvents();
+
             }
 
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
         }
 
 

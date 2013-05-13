@@ -83,6 +83,10 @@ namespace mbed_test_cs
         public double triggerTime;
         public int numPosVelMsgs = 0;
         public bool PosVelMessageReceived = false;
+        public long trTime;
+        public double bytesPerSec;
+        public int maxBytesInBuff;
+
         RichTextBox rtb;
         
 
@@ -379,31 +383,33 @@ namespace mbed_test_cs
             Thread.Sleep(100);
             ReadMessages();
 
-
-
             msgStr = "bcat Data/Nav.bin";
             writeBuffer_.Enqueue(msgStr);
             WriteMessages();
             Thread.Sleep(100);
             ReadMessages();
 
-
-            int maxBytesInBuff = 0;
+            maxBytesInBuff = 0;
 
             Stopwatch transferTime = new Stopwatch();
+            Stopwatch testForBytes = new Stopwatch();
             transferTime.Start();
-            while (serialPort_.BytesToRead > 0)
+            testForBytes.Start();   //timer to terminate the read loop if havent seen a byte in 1 sec
+            while (testForBytes.ElapsedMilliseconds < 1000)
             {
                 int btr = serialPort_.BytesToRead;
+                if (btr == 0) continue;
                 if (btr > 4096) btr = 4096;
                 serialPort_.Read(byteBuff, 0, btr);
                 BW.Write(byteBuff, 0, btr);
                 nBytes += btr;
                 if (btr > maxBytesInBuff) maxBytesInBuff = btr;
-                Thread.Sleep(1);
+                testForBytes.Restart();  //reset timer if we have received a byte
+                //Thread.Sleep(20);
             }
-            long trTime = transferTime.ElapsedMilliseconds;
-            double bytesPerSec = (nBytes/1000.0) / (trTime/1000.0);
+            trTime = transferTime.ElapsedMilliseconds;
+            bytesPerSec = (nBytes/1000.0) / (trTime/1000.0);
+
 
             //LogData(" total transfer time (msecs) = " + trTime.ToString() + "bytesPerSec = " + bytesPerSec.ToString("D2"));
 
@@ -425,9 +431,9 @@ namespace mbed_test_cs
             serialPort_.Close();
             LogData(" closed serial port \n");
 
-            Thread.Sleep(10000);
+            Thread.Sleep(1000);
 
-            nBytes = nBytes;        
+                nBytes = nBytes;        
 
         }
 
