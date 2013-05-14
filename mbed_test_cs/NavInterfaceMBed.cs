@@ -382,12 +382,15 @@ namespace mbed_test_cs
 
             Thread.Sleep(100);
             ReadMessages();
+            ParseMessages();
+            Thread.Sleep(100);
 
             msgStr = "bcat Data/Nav.bin";
             writeBuffer_.Enqueue(msgStr);
             WriteMessages();
             Thread.Sleep(100);
             ReadMessages();
+            ParseMessages();
 
             maxBytesInBuff = 0;
 
@@ -418,22 +421,28 @@ namespace mbed_test_cs
             WriteMessages();
             Thread.Sleep(100);
             ReadMessages();
+            ParseMessages();
             Thread.Sleep(100);
-
-            //LogData(" send exit to mbed \n");
-
 
             BW.Close(); //LogData(" closed binary writer \n");
             fs.Close(); //LogData(" closes nav.bin file \n");
 
             Thread.Sleep(1000);
+            ReadMessages();
+            ParseMessages();
+
 
             serialPort_.Close();
             LogData(" closed serial port \n");
+            ReadMessages();
+            ParseMessages();
+
 
             Thread.Sleep(1000);
+            ReadMessages();
+            ParseMessages();
 
-                nBytes = nBytes;        
+            nBytes = nBytes;        
 
         }
 
@@ -624,7 +633,7 @@ namespace mbed_test_cs
                 case NAVMBED_CMDS.GET_MBED_FILE:
                     {
                         msgStr += "GETFILE";
-                        LogData("send request to the nav data from mbed \n");
+                        LogData("from SendCommandToMBed:  send request to the nav data from mbed \n");
                     }
                     break;
 	        }
