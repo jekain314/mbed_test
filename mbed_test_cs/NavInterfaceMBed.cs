@@ -394,6 +394,7 @@ namespace mbed_test_cs
 
             maxBytesInBuff = 0;
 
+            LogData(" starting the transfer \n");
             Stopwatch transferTime = new Stopwatch();
             Stopwatch testForBytes = new Stopwatch();
             transferTime.Start();
@@ -414,7 +415,7 @@ namespace mbed_test_cs
             bytesPerSec = (nBytes/1000.0) / (trTime/1000.0);
 
 
-            //LogData(" total transfer time (msecs) = " + trTime.ToString() + "bytesPerSec = " + bytesPerSec.ToString("D2"));
+            LogData(" total transfer time (secs) = " + (trTime/1000.0).ToString("F2") + "bytesPerSec = " + bytesPerSec.ToString("F2"));
 
             msgStr = "exit";   //get out of the SDshell program
             writeBuffer_.Enqueue(msgStr);
@@ -424,8 +425,8 @@ namespace mbed_test_cs
             ParseMessages();
             Thread.Sleep(100);
 
-            BW.Close(); //LogData(" closed binary writer \n");
-            fs.Close(); //LogData(" closes nav.bin file \n");
+            BW.Close(); LogData(" closed binary writer \n");
+            fs.Close(); LogData(" closes nav.bin file \n");
 
             Thread.Sleep(1000);
             ReadMessages();
