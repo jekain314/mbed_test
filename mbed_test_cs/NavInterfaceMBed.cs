@@ -86,6 +86,7 @@ namespace mbed_test_cs
         public long trTime;
         public double bytesPerSec;
         public int maxBytesInBuff;
+        public int totalBytesWrittenByMbed;
 
         RichTextBox rtb;
         
@@ -354,19 +355,22 @@ namespace mbed_test_cs
 	        LogData("MBed Interface.");
         }
 
-        public void Close()
+        public void Close(System.Windows.Forms.ProgressBar fileDownLoadProgress)
         {
 	        ////////////////////////////////////////////////////////
 	        //orderly shutdown the mbed serial interface
 	        ////////////////////////////////////////////////////////
 
-            //LogData(" entering the nav close procedure \n");
+            fileDownLoadProgress.Style = ProgressBarStyle.Continuous;
+            fileDownLoadProgress.Visible = true;
+
+            LogData(" entering the nav close procedure -- send GET_MBED_FILE\n");
 	        SendCommandToMBed(NAVMBED_CMDS.GET_MBED_FILE);
 	        // Manually initiate these calls to ensure message is sent
 	        // and log confirmation
 	        WriteMessages();
 	        // Allow time for command to be sent
-	        Thread.Sleep(125);
+	        Thread.Sleep(500);
 	        ReadMessages();
             ParseMessages();
 
@@ -375,7 +379,8 @@ namespace mbed_test_cs
             byte[] byteBuff = new byte[2*4096];
 
             int nBytes = 0;
-  
+
+            LogData(" send ls \n");
             String msgStr = "ls";
             writeBuffer_.Enqueue(msgStr);
             WriteMessages();
@@ -385,6 +390,7 @@ namespace mbed_test_cs
             ParseMessages();
             Thread.Sleep(100);
 
+            LogData(" send:  bcat\n");
             msgStr = "bcat Data/Nav.bin";
             writeBuffer_.Enqueue(msgStr);
             WriteMessages();
@@ -394,7 +400,7 @@ namespace mbed_test_cs
 
             maxBytesInBuff = 0;
 
-            LogData(" starting the transfer \n");
+            LogData(" starting the actual byte transfer \n");
             Stopwatch transferTime = new Stopwatch();
             Stopwatch testForBytes = new Stopwatch();
             transferTime.Start();
@@ -410,13 +416,18 @@ namespace mbed_test_cs
                 if (btr > maxBytesInBuff) maxBytesInBuff = btr;
                 testForBytes.Restart();  //reset timer if we have received a byte
                 //Thread.Sleep(20);
+
+                fileDownLoadProgress.Value = (int)(100.0 * (double)nBytes / (double)totalBytesWrittenByMbed);
+                Application.DoEvents();
             }
             trTime = transferTime.ElapsedMilliseconds;
             bytesPerSec = (nBytes/1000.0) / (trTime/1000.0);
 
-
             LogData(" total transfer time (secs) = " + (trTime/1000.0).ToString("F2") + "bytesPerSec = " + bytesPerSec.ToString("F2"));
 
+            Thread.Sleep(200);
+
+            LogData(" send exit to mbed \n");
             msgStr = "exit";   //get out of the SDshell program
             writeBuffer_.Enqueue(msgStr);
             WriteMessages();
@@ -680,6 +691,8 @@ namespace mbed_test_cs
 			        //LogData(" found an mbed message " + parseStr);
 			        continue;
 		        }
+
+                //at this point we have found a message that begins with WMsg
 		        if (strEntries[1] == "POSVEL")
 		        {
 			        //LogData(" found a posVel message " + parseStr);
@@ -719,6 +732,10 @@ namespace mbed_test_cs
 				        // need to flag error
 			        }
 		        }
+                else if (strEntries[1] == "totalBytesWritten")
+                {
+                    totalBytesWrittenByMbed = Convert.ToInt32(strEntries[2]);
+                }
 	        }
         }
 

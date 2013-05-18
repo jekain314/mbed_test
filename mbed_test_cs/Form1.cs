@@ -258,7 +258,7 @@ namespace mbed_test_cs
                 Thread.Sleep(100);
 
 
-                navIF_.Close();
+                navIF_.Close(fileDownloadProgress);
 
                 label3.Visible = true;
                 label4.Visible = true;
@@ -277,6 +277,7 @@ namespace mbed_test_cs
             Application.Exit();
         }
 
+  
 
 
 

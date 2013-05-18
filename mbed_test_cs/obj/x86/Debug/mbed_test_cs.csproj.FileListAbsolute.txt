@@ -10,8 +10,6 @@ C:\Projects\mbed_test_cs\mbed_test_cs\obj\x86\Debug\mbed_test_cs.csproj.Generate
 C:\Projects\mbed_test_cs\mbed_test_cs\obj\x86\Debug\mbed_test_cs.exe
 C:\Projects\mbed_test_cs\mbed_test_cs\obj\x86\Debug\mbed_test_cs.pdb
 C:\Projects\Github\mbed_test\mbed_test_cs\bin\x86\Debug\mbed_test_cs.exe.config
-C:\Projects\Github\mbed_test\mbed_test_cs\obj\x86\Debug\mbed_test_cs.exe
-C:\Projects\Github\mbed_test\mbed_test_cs\obj\x86\Debug\mbed_test_cs.pdb
 C:\Projects\Github\mbed_test\mbed_test_cs\bin\x86\Debug\mbed_test_cs.exe
 C:\Projects\Github\mbed_test\mbed_test_cs\bin\x86\Debug\mbed_test_cs.pdb
 C:\Projects\Github\mbed_test\mbed_test_cs\bin\x86\Debug\CanonCameraEDSDK.dll
@@ -20,3 +18,5 @@ C:\Projects\Github\mbed_test\mbed_test_cs\obj\x86\Debug\mbed_test_cs.csprojResol
 C:\Projects\Github\mbed_test\mbed_test_cs\obj\x86\Debug\mbed_test_cs.Form1.resources
 C:\Projects\Github\mbed_test\mbed_test_cs\obj\x86\Debug\mbed_test_cs.Properties.Resources.resources
 C:\Projects\Github\mbed_test\mbed_test_cs\obj\x86\Debug\mbed_test_cs.csproj.GenerateResource.Cache
+C:\Projects\Github\mbed_test\mbed_test_cs\obj\x86\Debug\mbed_test_cs.exe
+C:\Projects\Github\mbed_test\mbed_test_cs\obj\x86\Debug\mbed_test_cs.pdb

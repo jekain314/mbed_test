@@ -44,6 +44,7 @@
             this.label4 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
             this.button2 = new System.Windows.Forms.Button();
+            this.fileDownloadProgress = new System.Windows.Forms.ProgressBar();
             this.SuspendLayout();
             // 
             // textBox1
@@ -206,11 +207,20 @@
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
+            // fileDownloadProgress
+            // 
+            this.fileDownloadProgress.Location = new System.Drawing.Point(160, 436);
+            this.fileDownloadProgress.Name = "fileDownloadProgress";
+            this.fileDownloadProgress.Size = new System.Drawing.Size(169, 23);
+            this.fileDownloadProgress.TabIndex = 18;
+            this.fileDownloadProgress.Visible = false;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(769, 471);
+            this.Controls.Add(this.fileDownloadProgress);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.label4);
@@ -249,6 +259,7 @@
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.ProgressBar fileDownloadProgress;
     }
 }
 
