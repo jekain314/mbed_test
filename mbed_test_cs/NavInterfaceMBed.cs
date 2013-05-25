@@ -73,7 +73,7 @@ namespace mbed_test_cs
         Mutex navIFMutex_;
         int serialReadThreshold_;
         bool serialInit_;
-        bool writeNavFiles_;
+        bool writeNavFiles_=true;
         Queue<String> serialBuffer_;
         Queue<String> readBuffer_;
         Queue<String> writeBuffer_;
@@ -242,7 +242,8 @@ namespace mbed_test_cs
 
 	        LogData("Test port : " + comID);  //present to the log the progress
 
-	        for (int b = 8; (b <= 8) && (serialPort_ == null); b++)  //just goes through this once??
+            //change by JEK fir the Slae Tablet
+	        for (int b = 8  ; (b <= 8) && (serialPort_ == null); b++)  //just goes through this once??
 	        {
 		        int baudRate = 115200*b;
 		        LogData("Test baudRate : " + baudRate.ToString("0"));  //present to progress to the log
@@ -403,13 +404,14 @@ namespace mbed_test_cs
             LogData(" starting the actual byte transfer \n");
             Stopwatch transferTime = new Stopwatch();
             Stopwatch testForBytes = new Stopwatch();
+            int missedBytes = 0;
             transferTime.Start();
             testForBytes.Start();   //timer to terminate the read loop if havent seen a byte in 1 sec
             while (testForBytes.ElapsedMilliseconds < 1000)
             {
                 int btr = serialPort_.BytesToRead;
                 if (btr == 0) continue;
-                if (btr > 4096) btr = 4096;
+                if (btr > 4096) { btr = 4096; missedBytes++; }
                 serialPort_.Read(byteBuff, 0, btr);
                 BW.Write(byteBuff, 0, btr);
                 nBytes += btr;
@@ -417,13 +419,15 @@ namespace mbed_test_cs
                 testForBytes.Restart();  //reset timer if we have received a byte
                 //Thread.Sleep(20);
 
-                fileDownLoadProgress.Value = (int)(100.0 * (double)nBytes / (double)totalBytesWrittenByMbed);
-                Application.DoEvents();
+                if (totalBytesWrittenByMbed > 0)
+                    fileDownLoadProgress.Value = (int)(100.0 * (double)nBytes / (double)totalBytesWrittenByMbed);
+                //Application.DoEvents();
             }
             trTime = transferTime.ElapsedMilliseconds;
             bytesPerSec = (nBytes/1000.0) / (trTime/1000.0);
 
-            LogData(" total transfer time (secs) = " + (trTime/1000.0).ToString("F2") + "bytesPerSec = " + bytesPerSec.ToString("F2"));
+            LogData(" total transfer time (secs) = " + (trTime/1000.0).ToString("F2") + "bytesPerSec = " + 
+                bytesPerSec.ToString("F2") + "  missedBytes= " + missedBytes.ToString());
 
             Thread.Sleep(200);
 
@@ -454,7 +458,6 @@ namespace mbed_test_cs
             ReadMessages();
             ParseMessages();
 
-            nBytes = nBytes;        
 
         }
 

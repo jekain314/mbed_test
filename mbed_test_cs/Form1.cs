@@ -136,14 +136,16 @@ namespace mbed_test_cs
 
         private void timerPPS_Tick(object sender, EventArgs e)
          {
-             
-            AppendRichText(richTextBox1, secCounter.ToString() + "  POSVEL messages: " +
-                 navIF_.numPosVelMsgs.ToString() + "/" + POSVELmessagesReceivedThisSec.ToString() + 
-                 "  numSV=  " + navIF_.posVel_.numSV.ToString() + 
-                 "\n" );
-             POSVELmessagesReceivedThisSec = 0;
-             navIF_.numPosVelMsgs = 0;
-             secCounter++;
+             if (navIF_ != null)
+             {
+                 AppendRichText(richTextBox1, secCounter.ToString() + "  POSVEL messages: " +
+                      navIF_.numPosVelMsgs.ToString() + "/" + POSVELmessagesReceivedThisSec.ToString() +
+                      "  numSV=  " + navIF_.posVel_.numSV.ToString() +
+                      "\n");
+                 POSVELmessagesReceivedThisSec = 0;
+                 navIF_.numPosVelMsgs = 0;
+                 secCounter++;
+             }
 
          }
 
@@ -173,7 +175,7 @@ namespace mbed_test_cs
 
             Application.DoEvents();
 
-            Thread.Sleep(500);
+            Thread.Sleep(200);
             //for Waldo_FCS, here we will compute the platform geometry and test for a trigger requirement
             //for mbed_test, we will simultate this by just waiting for an elepsed number of ticks
             //and then do a trigger request
@@ -226,7 +228,7 @@ namespace mbed_test_cs
         }
 
 
-        //////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////
         //  START and STOP button
         /////////////////////////////////////////////////////
         private void button1_Click(object sender, EventArgs e)
